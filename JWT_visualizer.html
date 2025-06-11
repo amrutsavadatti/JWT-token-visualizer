@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JWT Token Visualizer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 2rem;
+    }
+    h1 {
+      text-align: center;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .jwt-section {
+      margin-bottom: 2rem;
+    }
+    .jwt-token {
+      font-family: monospace;
+      word-wrap: break-word;
+      background: #eee;
+      padding: 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .token-info {
+      margin-top: 0.5rem;
+      font-size: 0.95rem;
+      color: #333;
+    }
+    .alg {
+      color: #d63384;
+    }
+    .payload {
+      color: #0d6efd;
+    }
+    .signature {
+      color: #198754;
+    }
+    .section {
+      margin-top: 1rem;
+    }
+    pre.alg {
+      color: #d63384;
+    }
+    pre.payload {
+      color: #0d6efd;
+    }
+    pre.secret {
+      color: #fd7e14;
+    }
+    pre.signature {
+      color: #198754;
+    }
+    pre {
+      background: #f8f9fa;
+      padding: 1rem;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    .verify-section, .create-section {
+      margin-top: 2rem;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.5rem;
+      font-family: monospace;
+    }
+    button {
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      background-color: #0d6efd;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0b5ed7;
+    }
+    .status {
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+    .explain {
+      margin-bottom: 2rem;
+      padding: 1rem;
+      background: #fff3cd;
+      border: 1px solid #ffeeba;
+      border-radius: 5px;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0, 0, 0, 0.6);
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background: white;
+      padding: 2rem;
+      border-radius: 10px;
+      max-width: 600px;
+      text-align: left;
+    }
+    .modal-content h3 {
+      margin-top: 0;
+    }
+    .close-btn {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      margin-top: 1rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>JWT Token Visualizer</h1>
+
+    <div class="explain">
+      <h3>What is a JWT?</h3>
+      <p>JWT (JSON Web Token) is a compact, URL-safe means of representing claims to be transferred between two parties. A JWT consists of three parts: <span class="alg">Header</span>, <span class="payload">Payload</span>, and <span class="signature">Signature</span>, separated by dots. </p>
+      <button onclick="openModal()">Learn how JWT is formed</button>
+    </div>
+
+    <div class="modal" id="jwtModal">
+      <div class="modal-content">
+        <h3>How a JWT Token is Formed</h3>
+        <p>A JWT token is composed of three parts:</p>
+        <ol>
+          <li><strong>Header:</strong> This typically consists of two parts: the type of the token (JWT) and the signing algorithm (e.g., HS256).</li>
+          <li><strong>Payload:</strong> Contains the claims. These can be registered (like <code>iss</code>, <code>exp</code>, <code>sub</code>, <code>iat</code>), public, or private claims.</li>
+          <li><strong>Signature:</strong> Created by encoding the header and payload, concatenating them with a dot, and signing the result using a secret key and the specified algorithm.</li>
+        </ol>
+        <p>The result is a string with three base64url-encoded components separated by dots: <code>header.payload.signature</code>.</p>
+  
+        <h3>How JWT is Verified</h3>
+        <p>To verify a JWT, the recipient uses the same secret and algorithm as the sender to recompute the signature over the received header and payload. If this computed signature matches the one in the JWT, the token is considered authentic and untampered.</p>
+  
+        <h3>Why JWT is Safe</h3>
+        <p>The safety of JWT comes from the use of a secret key or public-private key pair to generate the signature. Without knowing the exact secret or the private key, it is practically infeasible to forge a valid token. JWT also supports expiry (<code>exp</code>) and issued-at (<code>iat</code>) timestamps to prevent replay attacks and ensure the token is used within a valid time window.</p>
+  
+        <button class="close-btn" onclick="closeModal()">Close</button>
+      </div>
+    </div>
+
+    <div class="create-section">
+      <h2>Generate JWT</h2>
+      <label for="create-secret">Enter a secret to sign the token:</label>
+      <input type="text" id="create-secret" placeholder="your secret" />
+      <button onclick="generateJWT()">Generate Token</button>
+    </div>
+
+    <div class="jwt-section">
+      <h2>Generated JWT</h2>
+      <div id="jwt" class="jwt-token" onclick="copyJWT()" title="Click to copy"></div>
+      <div id="timer" class="token-info"></div>
+    </div>
+    <div class="section">
+      <h3>Header (Algorithm)</h3>
+      <pre id="header" class="alg"></pre>
+    </div>
+    <div class="section">
+      <h3>Payload (Data)</h3>
+      <pre id="payload" class="payload"></pre>
+    </div>
+    <div class="section">
+      <h3>Signature</h3>
+      <pre id="signature" class="signature"></pre>
+    </div>
+    <div class="verify-section">
+      <h2>Verify JWT</h2>
+      <label for="verify-token">Paste your JWT below:</label>
+      <input type="text" id="verify-token" placeholder="header.payload.signature" />
+      <button onclick="verifyJWT()">Verify</button>
+      <div id="verify-status" class="status"></div>
+    </div>
+  </div>
+
+  <script>
+    var secretGlobal;
+    var currentToken = "";
+    var expirationTimer;
+
+    function base64url(source) {
+      return btoa(source)
+        .replace(/=/g, '')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_');
+    }
+
+    function base64urlDecode(input) {
+      input = input.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = input.length % 4;
+      if (pad === 2) input += '==';
+      else if (pad === 3) input += '=';
+      else if (pad === 1) input += '===';
+      return atob(input);
+    }
+
+    function startTokenTimer(exp) {
+      clearInterval(expirationTimer);
+      function updateTimer() {
+        const now = Math.floor(Date.now() / 1000);
+        const remaining = exp - now;
+        const display = remaining > 0
+          ? `⏳ Token expires in ${Math.floor(remaining / 60)}m ${remaining % 60}s`
+          : `⛔ Token has expired.`;
+        document.getElementById('timer').textContent = display;
+      }
+      updateTimer();
+      expirationTimer = setInterval(updateTimer, 1000);
+    }
+
+    function createJWT(header, payload, secret) {
+      secretGlobal = secret;
+      const headerBase64 = base64url(JSON.stringify(header));
+      const payloadBase64 = base64url(JSON.stringify(payload));
+      const signatureRaw = headerBase64 + "." + payloadBase64 + secret;
+      const signatureBase64 = base64url(signatureRaw);
+
+      currentToken = `${headerBase64}.${payloadBase64}.${signatureBase64}`;
+
+      const tokenHTML = `
+        <span class='alg'>${headerBase64}</span><span>.</span>
+        <span class='payload'>${payloadBase64}</span><span>.</span>
+        <span class='signature'>${signatureBase64}</span>
+      `;
+
+      document.getElementById('jwt').innerHTML = tokenHTML;
+      document.getElementById('header').textContent = JSON.stringify(header, null, 2);
+      document.getElementById('payload').textContent = JSON.stringify(payload, null, 2);
+      document.getElementById('signature').textContent = signatureBase64;
+      startTokenTimer(payload.exp);
+    }
+
+    function generateJWT() {
+      const secret = document.getElementById('create-secret').value;
+      if (!secret) {
+        alert("Please enter a secret to generate the token.");
+        return;
+      }
+      const now = Math.floor(Date.now() / 1000);
+      const header = {
+        alg: "HS256",
+        typ: "JWT"
+      };
+      const payload = {
+        user_id: 123,
+        name: "User Name",
+        role: "admin",
+        iat: now,
+        exp: now + 60
+      };
+      createJWT(header, payload, secret);
+    }
+
+    function verifyJWT() {
+      const inputToken = document.getElementById('verify-token').value;
+      const secret = secretGlobal;
+
+      const parts = inputToken.split('.');
+      if (parts.length !== 3) {
+        document.getElementById('verify-status').textContent = "Invalid token format.";
+        document.getElementById('verify-status').style.color = 'red';
+        return;
+      }
+
+      const [headerB64, payloadB64, signatureB64] = parts;
+      const signatureRaw = headerB64 + "." + payloadB64 + secret;
+      const expectedSig = base64url(signatureRaw);
+
+      let payloadDecoded;
+      try {
+        payloadDecoded = JSON.parse(base64urlDecode(payloadB64));
+      } catch (e) {
+        document.getElementById('verify-status').textContent = "Payload is not valid JSON.";
+        document.getElementById('verify-status').style.color = 'red';
+        return;
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      const isExpired = payloadDecoded.exp && now > payloadDecoded.exp;
+
+      if (expectedSig === signatureB64 && !isExpired) {
+        document.getElementById('verify-status').textContent = "Token is VALID. Integrity and expiry are intact.";
+        document.getElementById('verify-status').style.color = 'green';
+      } else if (expectedSig === signatureB64 && isExpired) {
+        document.getElementById('verify-status').textContent = "Token is EXPIRED.";
+        document.getElementById('verify-status').style.color = 'orange';
+      } else {
+        document.getElementById('verify-status').textContent = "Token is INVALID. Payload or signature may have been tampered with.";
+        document.getElementById('verify-status').style.color = 'red';
+      }
+    }
+
+    function copyJWT() {
+      navigator.clipboard.writeText(currentToken).then(() => {
+        alert("JWT copied to clipboard!");
+      });
+    }
+
+    function openModal() {
+      document.getElementById('jwtModal').style.display = 'flex';
+    }
+    function closeModal() {
+      document.getElementById('jwtModal').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
